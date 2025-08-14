@@ -1,59 +1,73 @@
 // server/index.js
-const express = require('express');
-const cors = require('cors');
-const path = require('path')
-const Database = require('better-sqlite3')
+require("dotenv").config();
+const express = require("express");
+const cors = require("cors");
+const mysql = require("mysql2/promise");
 
 const PORT = process.env.PORT || 3001;
 const app = express();
-const fs = require('fs');
-const db = new Database(path.join(__dirname, 'data.db'))
-
-// Đọc và chạy file seed.sql
-db.exec('DELETE FROM tasks; VACUUM;');
-const seedSQL = fs.readFileSync(path.join(__dirname, 'seed.sql'), 'utf8');
-db.exec(seedSQL);
-console.log('✅ Seed data đã được nạp từ seed.sql');
 
 // Middleware
-app.use(cors()); // Cho phép mọi domain gọi API
-app.use(express.json()); // Đọc dữ liệu JSON từ body
+app.use(cors());
+app.use(express.json());
 
-
-
-
-
-// Route thử nghiệm
-app.get('/api/hello', (req, res) => {
-  res.json({ message: 'Hello from Node.js API' });
+// Tạo pool MySQL (đọc từ .env)
+const pool = mysql.createPool({
+  host: process.env.MYSQL_HOST || "localhost",
+  port: Number(process.env.MYSQL_PORT || 3306),
+  user: process.env.MYSQL_USER || "root",
+  password: process.env.MYSQL_PASSWORD || "",
+  database: process.env.MYSQL_DATABASE || "myapp",
+  waitForConnections: true,
+  connectionLimit: 10,
 });
 
-app.get('/api/tasks', (req, res) => {
-    const rows = db.prepare('SELECT id, title, done, created_at FROM tasks ORDER BY id DESC').all();
-    const data = rows.map(r => ({ ...r, done: !!r.done}));
+// Route thử nghiệm
+app.get("/api/hello", (req, res) => {
+  res.json({ message: "Hello from Node.js API" });
+});
+
+// GET /api/tasks
+app.get("/api/tasks", async (req, res) => {
+  try {
+    const [rows] = await pool.query(
+      "SELECT id, title, done, created_at FROM tasks ORDER BY id DESC"
+    );
+    const data = rows.map((r) => ({ ...r, done: !!r.done }));
     res.json(data);
-})
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "DB error" });
+  }
+});
 
-app.post('/api/tasks', (req, res) => {
-    const {title} = req.body || {};
-    if(!title || !title.trim()) {
-        return res.status(400).json({error : 'title is required'});
-    }
+// POST /api/tasks
+app.post("/api/tasks", async (req, res) => {
+  const { title } = req.body || {};
+  if (!title || !title.trim()) {
+    return res.status(400).json({ error: "title is required" });
+  }
+  try {
+    const [result] = await pool.query(
+      "INSERT INTO tasks (title) VALUES (?)",
+      [title.trim()]
+    );
+    const insertId = result.insertId;
 
-    const info = db
-        .prepare('INSERT INTO tasks (title) VALUES (?)')
-        .run(title.trim())
-
-        // Lấy task vừa thêm để trả lại
-    const row = db
-        .prepare('SELECT id, title, done, created_at FROM tasks WHERE id = ?')
-        .get(info.lastInsertRowid);
-
-    row.done = !!row.done; // chuyển 0/1 -> boolean
+    const [rows] = await pool.query(
+      "SELECT id, title, done, created_at FROM tasks WHERE id = ?",
+      [insertId]
+    );
+    const row = rows[0];
+    row.done = !!row.done;
     res.status(201).json(row);
-})
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "DB error" });
+  }
+});
 
-// Khởi động server
+// Start server
 app.listen(PORT, () => {
   console.log(`✅ Server đang chạy tại http://localhost:${PORT}`);
 });

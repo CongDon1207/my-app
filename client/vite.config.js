@@ -1,1 +1,12 @@
-"tam thoi the nay"
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+
+export default defineConfig({
+  plugins: [react()],
+  server: {
+    port: 5173,            // cổng dev của Vite
+    proxy: {
+      '/api': 'http://localhost:3001' // chuyển mọi gọi /api sang backend
+    }
+  }
+})

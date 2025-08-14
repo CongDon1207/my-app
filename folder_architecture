@@ -1,0 +1,19 @@
+my-app/                # Thư mục gốc dự án
+│
+├── server/            # Backend (Node.js + Express + SQLite)
+│   ├── index.js        # File chính chạy server + API
+│   ├── data.db         # File database SQLite (tự tạo sau khi chạy)
+│   ├── package.json    # Thông tin và dependency backend
+│   └── node_modules/   # Thư viện backend
+│
+├── client/            # Frontend (React + Vite)
+│   ├── src/            # Code React
+│   │   ├── App.jsx     # Component chính của React
+│   │   ├── main.jsx    # Điểm vào frontend
+│   │   └── ...         # Các component khác (nếu chia nhỏ)
+│   ├── public/         # File tĩnh (ảnh, favicon...)
+│   ├── vite.config.js  # Cấu hình Vite (proxy API, build...)
+│   ├── package.json    # Thông tin và dependency frontend
+│   └── node_modules/   # Thư viện frontend
+│
+└── README.md           # (Tùy chọn) ghi chú dự án
