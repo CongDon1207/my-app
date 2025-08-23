@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react'
 import { toggleTask, deleteTask } from './api/tasks';
 import './App.css'
+import TaskItem from './components/TaskItem';
+import TaskForm from './components/TaskForm';
+
 
 function App() {
   const [tasks, setTasks] = useState([])
@@ -35,29 +38,47 @@ function App() {
     }
   }
 
+  async function addTask(title) {
+  try {
+    const res = await fetch('/api/tasks', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title })
+    });
+    if (!res.ok) {
+      const err = await (async () => { try { return await res.json(); } catch { return null; } })();
+      throw new Error(err?.error || `POST failed (${res.status})`);
+    }
+    const newTask = await res.json();
+    setTasks(prev => [newTask, ...prev]); // thêm lên đầu danh sách
+  } catch (e) {
+    setErr(e.message || 'Tạo task thất bại');
+    throw e; // để TaskForm biết và hiển thị lỗi cục bộ
+  }
+}
+
+
   return (
     <div className="app-wrapper">
+      
       <div className="task-box">
         <h1>Danh sách Tasks</h1>
 
         {err && <p className="error">{err}</p>}
-        
+
+        <TaskForm onAdd={addTask} />
+
         <ul className="task-list">
           {tasks.map(task => (
-            <li key={task.id} className="task-item">
-              <input
-                type="checkbox"
-                checked={task.done}
-                onChange={() => onToggle(task.id)}
-                title="Toggle done"
-              />
-              <span className={task.done ? "task-done" : ""}>
-                {task.title}
-              </span>
-              <button onClick={() => onDelete(task.id)} title="Xoá task">🗑️</button>
-            </li>
+            <TaskItem
+              key={task.id}
+              task={task}
+              onToggle={onToggle}
+              onDelete={onDelete}
+            />
           ))}
         </ul>
+
       </div>
     </div>
   )
