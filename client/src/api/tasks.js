@@ -1,34 +1,30 @@
 // client/src/api/tasks.js
+import { httpJSON } from '../lib/http';
+import { mapServerError } from '../utils/errorMapper';
+
 const BASE = '/api/tasks';
 
-// Toggle (không truyền done) hoặc set done rõ ràng
+export async function createTask(title) {
+  const res = await httpJSON(`${BASE}`, {
+    method: 'POST',
+    body: JSON.stringify({ title }),
+  });
+  if (!res.ok) throw new Error(mapServerError(res.error));
+  return res.data;
+}
+
 export async function toggleTask(id, done) {
-  const opts = { method: 'PATCH' };
+  const opts = done === undefined
+    ? { method: 'PATCH' }
+    : { method: 'PATCH', body: JSON.stringify({ done: !!done }) };
 
-  if (done !== undefined) {
-    opts.headers = { 'Content-Type': 'application/json' };
-    opts.body = JSON.stringify({ done: !!done });
-  }
-  // done === undefined -> không gửi body -> server sẽ toggle
-
-  const res = await fetch(`${BASE}/${id}`, opts);
-  if (!res.ok) {
-    const err = await safeJson(res);
-    throw new Error(err?.error || `PATCH failed (${res.status})`);
-  }
-  return res.json();
+  const res = await httpJSON(`${BASE}/${id}`, opts);
+  if (!res.ok) throw new Error(mapServerError(res.error));
+  return res.data;
 }
 
 export async function deleteTask(id) {
-  const res = await fetch(`${BASE}/${id}`, { method: 'DELETE' });
-  if (res.status === 204) return true; // No Content
-  if (!res.ok) {
-    const err = await safeJson(res);
-    throw new Error(err?.error || `DELETE failed (${res.status})`);
-  }
+  const res = await httpJSON(`${BASE}/${id}`, { method: 'DELETE' });
+  if (!res.ok && res.status !== 204) throw new Error(mapServerError(res.error));
   return true;
-}
-
-async function safeJson(res) {
-  try { return await res.json(); } catch { return null; }
 }

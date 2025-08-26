@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { toggleTask, deleteTask } from './api/tasks';
+import { createTask, toggleTask, deleteTask } from './api/tasks';
 import './App.css'
 import TaskItem from './components/TaskItem';
 import TaskForm from './components/TaskForm';
@@ -39,23 +39,14 @@ function App() {
   }
 
   async function addTask(title) {
-  try {
-    const res = await fetch('/api/tasks', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title })
-    });
-    if (!res.ok) {
-      const err = await (async () => { try { return await res.json(); } catch { return null; } })();
-      throw new Error(err?.error || `POST failed (${res.status})`);
+    try {
+      const newTask = await createTask(title);
+      setTasks(prev => [newTask, ...prev]);
+    } catch (e) {
+      setErr(e.message || 'Tạo task thất bại');
+      throw e; // để TaskForm biết và hiển thị lỗi cục bộ
     }
-    const newTask = await res.json();
-    setTasks(prev => [newTask, ...prev]); // thêm lên đầu danh sách
-  } catch (e) {
-    setErr(e.message || 'Tạo task thất bại');
-    throw e; // để TaskForm biết và hiển thị lỗi cục bộ
   }
-}
 
 
   return (
