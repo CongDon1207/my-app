@@ -2,7 +2,8 @@
 import express from 'express';
 import { env } from './src/infrastructure/config/env.js';
 import authRoutes from './src/domains/auth/api/auth.routes.js';
-import { errorHandler } from './src/infrastructure/http/error.js';
+
+import errorHandler from "./src/infrastructure/http/error.js";
 
 const app = express();
 app.use(express.json());
