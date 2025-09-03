@@ -1,0 +1,42 @@
+backend/
+└─ src/
+   ├─ domains/
+   │  ├─ catalog/
+   │  │  ├─ api/
+   │  │  │  └─ catalog.routes.js
+   │  │  ├─ controllers/
+   │  │  │  └─ catalog.controller.js
+   │  │  ├─ models/
+   │  │  │  ├─ category.model.js
+   │  │  │  └─ product.model.js
+   │  │  ├─ repositories/
+   │  │  │  ├─ category.repo.js
+   │  │  │  └─ product.repo.js
+   │  │  ├─ services/
+   │  │  │  ├─ category.service.js
+   │  │  │  └─ product.service.js
+   │  │  └─ validators/
+   │  │     └─ productQuery.schema.js
+   │  │
+   │  └─ auth/                     # 👈 domain mới
+   │     ├─ api/
+   │     │  └─ auth.routes.js
+   │     ├─ controllers/
+   │     │  └─ auth.controller.js
+   │     ├─ models/
+   │     │  └─ user.model.js       # Zod schema / DTO
+   │     ├─ repositories/
+   │     │  └─ user.repo.js        # query đến bảng users
+   │     ├─ services/
+   │     │  └─ auth.service.js     # business logic login/register
+   │     └─ validators/
+   │        └─ auth.schema.js      # validate input login/register
+   │
+   ├─ infrastructure/
+   │  ├─ db/prisma.js
+   │  ├─ http/error.js
+   │  ├─ config/env.js
+   │  └─ utils/pagination.js
+   │
+   ├─ app.js
+   └─ server.js

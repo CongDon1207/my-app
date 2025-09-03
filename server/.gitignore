@@ -45,3 +45,5 @@ pids
 # Local scripts or secrets
 scripts/local-*/
 secrets/
+
+/src/generated/prisma
