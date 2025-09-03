@@ -1,0 +1,44 @@
+frontend/
+└─ src/
+   ├─ app/
+   │  ├─ router.jsx             # định nghĩa routes theo pages
+   │  └─ providers.jsx          # (tuỳ chọn) gói QueryClient, Toaster...
+   ├─ pages/
+   │  ├─ Home/
+   │  │  └─ index.jsx
+   │  ├─ Catalog/               # PLP: /products?q=&sort=&page=
+   │  │  └─ index.jsx
+   │  ├─ ProductDetail/         # PDP: /products/:slug
+   │  │  └─ index.jsx
+   │  ├─ Cart/
+   │  │  └─ index.jsx
+   │  ├─ Checkout/
+   │  │  └─ index.jsx
+   │  ├─ Auth/
+   │  │  ├─ Login.jsx
+   │  │  └─ Register.jsx
+   │  └─ Orders/
+   │     └─ index.jsx
+   ├─ features/
+   │  ├─ catalog/
+   │  │  ├─ api/                # listProducts.js, getProductDetail.js ...
+   │  │  ├─ components/         # ProductCard.jsx, Filters.jsx...
+   │  │  ├─ hooks/              # useProductsQuery.js, useProductDetail.js
+   │  │  └─ schemas/            # product.schema.js (Zod, optional)
+   │  ├─ cart/
+   │  │  ├─ store/              # cart.store.js (Zustand)
+   │  │  └─ components/
+   │  └─ user/
+   │     ├─ api/                # login.js, register.js, me.js
+   │     └─ hooks/              # useAuth.js
+   ├─ shared/
+   │  ├─ components/            # Button.jsx, Input.jsx, Spinner.jsx...
+   │  ├─ lib/
+   │  │  ├─ http.js             # axios instance (baseURL từ .env)
+   │  │  └─ query.js            # createQueryClient (mặc định)
+   │  ├─ utils/                 # formatPrice.js, debounce.js, cn.js...
+   │  ├─ constants/             # routes.js, queryKeys.js, paging.js
+   │  └─ styles/                # global.css (hoặc tailwind.css)
+   ├─ assets/
+   ├─ main.jsx
+   └─ index.html
