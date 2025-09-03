@@ -1,0 +1,5 @@
+@import "tailwindcss";
+
+/* (không bắt buộc) Một ít reset nhẹ cho form */
+:root { color-scheme: light; }
+button { cursor: pointer; }
