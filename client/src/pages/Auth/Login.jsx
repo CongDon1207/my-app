@@ -3,18 +3,12 @@ import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useMutation } from "@tanstack/react-query";
 import { z } from "zod";
-import http from "../../shared/api/http";
+import { loginApi } from "../../api/auth";
 
 const loginSchema = z.object({
   email: z.string().email("Email không hợp lệ"),
   password: z.string().min(1, "Mật khẩu không được bỏ trống"),
 });
-
-async function loginApi(input) {
-  const res = await http.post("/auth/login", input);
-  // BE: { success:true, data:{ user, tokens }, error:null }
-  return res.data.data;
-}
 
 export default function Login() {
   const navigate = useNavigate();
