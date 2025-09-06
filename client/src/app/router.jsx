@@ -2,10 +2,8 @@
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import Login from "../pages/Auth/Login.jsx";
 import MainLayout from "../layouts/MainLayout.jsx";
-
-function HomePlaceholder() {
-  return <div style={{ padding: 16 }}></div>;
-}
+import Home from "../pages/Home.jsx";
+import RequireAuth from "../shared/auth/RequireAuth.jsx";
 
 
 const router = createBrowserRouter([
@@ -13,7 +11,7 @@ const router = createBrowserRouter([
     path: "/",
     element: <MainLayout />,
     children: [
-      { path: "/", element: <HomePlaceholder /> },
+      { path: "/", element:(<RequireAuth>{<Home />}</RequireAuth>) },
       { path: "/login", element: <Login /> },
     ],
   },
