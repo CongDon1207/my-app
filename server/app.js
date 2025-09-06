@@ -2,6 +2,7 @@
 import express from 'express';
 import { env } from './src/infrastructure/config/env.js';
 import authRoutes from './src/domains/auth/api/auth.routes.js';
+import homeRoutes from './src/domains/catalog/api/home.routes.js';
 
 import errorHandler from "./src/infrastructure/http/error.js";
 
@@ -17,6 +18,7 @@ app.get('/health', (_req, res) => res.json({ ok: true }));
 
 // Mount API theo prefix (.env: API_PREFIX="/api")
 app.use(`${env.API_PREFIX}/auth`, authRoutes);
+app.use(`${env.API_PREFIX}/home`, homeRoutes);
 
 // Error handling đặt cuối
 app.use(errorHandler);
