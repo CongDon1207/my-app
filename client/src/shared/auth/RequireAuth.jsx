@@ -1,7 +1,7 @@
 // client/src/shared/auth/RequireAuth.jsx
 import { Navigate, useLocation } from "react-router-dom";
 
-function getAuth() {
+export function getAuth() {
   try {
     const raw = localStorage.getItem("auth");
     if (!raw) return null;

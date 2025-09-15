@@ -16,3 +16,9 @@ export async function registerApi({ name, email, password }) {
   }
   return res.data.data; // { user }
 }
+
+export async function logoutApi() {
+  const res = await http.post('/auth/logout'); // hoặc delete
+  if (!res?.data?.success) throw new Error('Logout failed');
+  return res.data;
+}

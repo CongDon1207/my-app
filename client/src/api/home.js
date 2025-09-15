@@ -8,6 +8,12 @@ export async function getHome() {
   if (!res?.data?.success) {
     throw new Error(res?.data?.error?.message || "Không thể tải dữ liệu Home");
   }
-  return res.data.data; // { message, featuredProducts, categories }
+  const data = res.data.data || {};
+  // Backend hiện trả `featured` (mock). Frontend kỳ vọng `featuredProducts`.
+  return {
+    message: data.message,
+    featuredProducts: data.featured || data.featuredProducts || [],
+    categories: data.categories || [],
+  };
 }
   

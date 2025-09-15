@@ -24,3 +24,7 @@ server/node_modules/
 
 # MCP
 server/.serena
+
+AGENTS.md
+.github/
+.vscode/
