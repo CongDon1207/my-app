@@ -32,8 +32,8 @@ export async function findProducts({ page = 1, limit = 12, search = '', category
 
   if (search) {
     where.OR = [
-      { title: { contains: String(search), mode: 'insensitive' } },
-      { description: { contains: String(search), mode: 'insensitive' } }
+      { title: { contains: String(search) } },
+      { description: { contains: String(search) } }
     ];
   }
 
