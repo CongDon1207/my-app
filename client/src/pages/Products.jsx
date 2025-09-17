@@ -1,7 +1,7 @@
 // client/src/pages/Products.jsx
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { getProductsApi } from "../api/products";
+import { getProductsApi, getCategoriesApi } from "../api/products";
 
 const SORT_OPTIONS = [
   { value: "newest", label: "Mới nhất" },
@@ -9,8 +9,7 @@ const SORT_OPTIONS = [
   { value: "price_desc", label: "Giá giảm dần" },
 ];
 
-// [Suy luận] Category mẫu để test nhanh.
-// Lượt tới sẽ thay bằng API /api/categories đọc từ DB thật (bảng `categories`).
+// Category mẫu để test nhanh / fallback khi API không phản hồi.
 const CATEGORIES_SAMPLE = [
   { value: "", label: "Tất cả" },
   { value: "electronics", label: "Electronics" },
@@ -37,6 +36,26 @@ export default function Products() {
     queryFn: () => getProductsApi({ page, limit, search, category, sort }),
     keepPreviousData: true,
   });
+
+  // Categories: fetch once and cache for 5 minutes
+  const {
+    data: categoriesData,
+    isLoading: isLoadingCategories,
+    isError: isErrorCategories,
+    error: categoriesError,
+  } = useQuery({
+    queryKey: ["categories"],
+    queryFn: () => getCategoriesApi(),
+    staleTime: 1000 * 60 * 5,
+  });
+
+  const categoryOptions = useMemo(() => {
+    const src = Array.isArray(categoriesData) ? categoriesData : CATEGORIES_SAMPLE;
+    return src.map((c) => ({
+      value: c.slug ?? c.value ?? "",
+      label: c.productCount != null ? `${c.name} (${c.productCount})` : c.label ?? c.name,
+    }));
+  }, [categoriesData]);
 
   const items = data?.items ?? [];
   const total = data?.total ?? 0;
@@ -83,10 +102,16 @@ export default function Products() {
             onChange={onChangeCategory}
             className="border rounded-lg px-3 py-2"
             aria-label="Category"
+            disabled={isLoadingCategories}
           >
-            {CATEGORIES_SAMPLE.map((c) => (
-              <option key={c.value} value={c.value}>{c.label}</option>
-            ))}
+            {isLoadingCategories && <option>Đang tải...</option>}
+            {isErrorCategories && <option>Không tải được danh mục</option>}
+            {!isLoadingCategories && !isErrorCategories &&
+              categoryOptions.map((c) => (
+                <option key={c.value} value={c.value}>
+                  {c.label}
+                </option>
+              ))}
           </select>
 
           {/* Sort */}

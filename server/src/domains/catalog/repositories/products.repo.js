@@ -3,10 +3,14 @@ import { prisma } from '../../../infrastructure/db/prisma.js';
 
 // sort: 'newest' | 'price_asc' | 'price_desc'
 function buildOrderBy(sort) {
+  // Return an array suitable for Prisma's orderBy
   switch (sort) {
-    case 'price_asc':  return 'p.price ASC, p.created_at DESC';
-    case 'price_desc': return 'p.price DESC, p.created_at DESC';
-    default:           return 'p.created_at DESC'; // newest
+    case 'price_asc':
+      return [{ price: 'asc' }, { created_at: 'desc' }];
+    case 'price_desc':
+      return [{ price: 'desc' }, { created_at: 'desc' }];
+    default:
+      return [{ created_at: 'desc' }]; // newest
   }
 }
 
@@ -20,65 +24,96 @@ function buildOrderBy(sort) {
  * @param {string} [opts.sort] - 'newest' | 'price_asc' | 'price_desc'
  */
 export async function findProducts({ page = 1, limit = 12, search = '', categorySlug = '', sort = 'newest' } = {}) {
-  const offset = Math.max(0, (Number(page) - 1) * Number(limit));
+  const skip = Math.max(0, (Number(page) - 1) * Number(limit));
+  const take = Number(limit);
   const orderBy = buildOrderBy(sort);
 
-  // WHERE điều kiện
-  // - active = 1
-  // - search theo title/description nếu có
-  // - filter theo category nếu có
-  const whereClauses = ['p.active = 1'];
-  const params = [];
+  // Build where clause for Prisma
+  const where = { active: true };
 
   if (search) {
-    whereClauses.push('(p.title LIKE CONCAT("%", ?, "%") OR p.description LIKE CONCAT("%", ?, "%"))');
-    params.push(search, search);
+    where.OR = [
+      { title: { contains: String(search), mode: 'insensitive' } },
+      { description: { contains: String(search), mode: 'insensitive' } }
+    ];
   }
+
   if (categorySlug) {
-    whereClauses.push('c.slug = ?');
-    params.push(categorySlug);
+    // filter by related category slug
+    where.categories = { slug: String(categorySlug) };
   }
-  const whereSQL = whereClauses.length ? `WHERE ${whereClauses.join(' AND ')}` : '';
 
-  // Main query: items
-  const items = await prisma.$queryRawUnsafe(
-    `
-    SELECT 
-      p.id,
-      p.title,
-      p.price,
-      p.currency,
-      (
-        SELECT i.url 
-        FROM product_images i 
-        WHERE i.product_id = p.id 
-        ORDER BY i.id ASC LIMIT 1
-      ) AS imageUrl
-    FROM products p
-    LEFT JOIN categories c ON c.id = p.category_id
-    ${whereSQL}
-    ORDER BY ${orderBy}
-    LIMIT ? OFFSET ?;
-    `,
-    ...params, Number(limit), offset
-  );
+  // Fetch items with first image
+  const items = await prisma.products.findMany({
+    where,
+    select: {
+      id: true,
+      title: true,
+      price: true,
+      currency: true,
+      product_images: {
+        select: { url: true },
+        orderBy: { id: 'asc' },
+        take: 1
+      }
+    },
+    orderBy,
+    skip,
+    take
+  });
 
-  // Count query: total
-  const totalRows = await prisma.$queryRawUnsafe(
-    `
-    SELECT COUNT(*) as total
-    FROM products p
-    LEFT JOIN categories c ON c.id = p.category_id
-    ${whereSQL};
-    `,
-    ...params
-  );
-  const total = Array.isArray(totalRows) && totalRows[0]?.total ? Number(totalRows[0].total) : 0;
+  // Count total matching
+  const total = await prisma.products.count({ where });
+
+  // Map imageUrl
+  const mapped = items.map(p => ({
+    id: p.id,
+    title: p.title,
+    price: p.price,
+    currency: p.currency,
+    imageUrl: Array.isArray(p.product_images) && p.product_images[0] ? p.product_images[0].url : null
+  }));
 
   return {
-    items: Array.isArray(items) ? items : [],
-    total,
+    items: mapped,
+    total: Number(total),
     page: Number(page),
     limit: Number(limit)
   };
 }
+
+/**
+ * findCategories: lấy danh sách categories.
+ * - Mặc định chỉ trả về những danh mục có ít nhất 1 product active (active = true).
+ * @param {Object} opts
+ * @param {boolean} [opts.onlyWithProducts=true] - nếu false sẽ trả về tất cả category
+ */
+export async function findCategories({ onlyWithProducts = true } = {}) {
+  const where = onlyWithProducts ? { products: { some: { active: true } } } : {};
+
+  const rows = await prisma.categories.findMany({
+    where,
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      parent_id: true,
+      _count: {
+        select: { products: true }
+      }
+    },
+    orderBy: { name: 'asc' }
+  });
+
+  return Array.isArray(rows)
+    ? rows.map(r => ({
+        id: r.id,
+        name: r.name,
+        slug: r.slug,
+        parentId: r.parent_id,
+        productCount: r._count?.products ?? 0
+      }))
+    : [];
+}
+
+

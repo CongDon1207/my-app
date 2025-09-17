@@ -1,5 +1,5 @@
 // server/src/domains/catalog/services/products.service.js
-import { findProducts } from '../repositories/products.repo.js';
+import { findProducts, findCategories } from '../repositories/products.repo.js';
 
 /**
  * getProductsList: gom data trả cho controller
@@ -29,4 +29,19 @@ export async function getProductsList(query = {}) {
     page: result.page,
     limit: result.limit
   };
+}
+
+export async function getCategoriesList() {
+  // Lấy danh sách categories từ DB
+  // Bảng & cột theo DB.sql: categories(id, name, slug)
+  const rows = await findCategories({ onlyWithProducts: true });
+
+  // Map về shape cho FE (giữ các trường cần thiết)
+  return rows.map(c => ({
+    id: c.id,
+    name: c.name,
+    slug: c.slug,
+    parentId: c.parentId ?? null,
+    productCount: Number(c.productCount || 0)
+  }));
 }
