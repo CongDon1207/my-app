@@ -1,25 +1,37 @@
 // client/src/pages/Products.jsx
 import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useSearchParams } from "react-router-dom";
 import { getProductsApi, getCategoriesApi } from "../api/products";
 
 const SORT_OPTIONS = [
-  { value: "newest", label: "Newest" },
-  { value: "price_asc", label: "Price Asc" },
-  { value: "price_desc", label: "Price Desc" },
+  { value: "newest", label: "Mới nhất" },
+  { value: "price_asc", label: "Giá tăng dần" },
+  { value: "price_desc", label: "Giá giảm dần" },
 ];
 
-const DEFAULT_CATEGORY_OPTION = { value: "", label: "Tat ca" };
+const DEFAULT_CATEGORY_OPTION = { value: "", label: "Tất cả" };
 
 export default function Products() {
-  const [page, setPage] = useState(1);
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const initialSearch = (searchParams.get("search") ?? "").trim();
+  const initialCategory = searchParams.get("category") ?? "";
+  const initialSortRaw = searchParams.get("sort") ?? "newest";
+  const initialSort = SORT_OPTIONS.some((option) => option.value === initialSortRaw)
+    ? initialSortRaw
+    : "newest";
+  const initialPageRaw = parseInt(searchParams.get("page") ?? "1", 10);
+  const initialPage = Number.isFinite(initialPageRaw) && initialPageRaw > 0 ? initialPageRaw : 1;
+
+  const [page, setPage] = useState(initialPage);
   const [limit] = useState(12);
 
-  const [keyword, setKeyword] = useState("");
-  const [search, setSearch] = useState("");
+  const [keyword, setKeyword] = useState(initialSearch);
+  const [search, setSearch] = useState(initialSearch);
 
-  const [category, setCategory] = useState("");
-  const [sort, setSort] = useState("newest");
+  const [category, setCategory] = useState(initialCategory);
+  const [sort, setSort] = useState(initialSort);
 
   const [categories, setCategories] = useState([]);
   const [isLoadingCategories, setIsLoadingCategories] = useState(true);
@@ -54,6 +66,52 @@ export default function Products() {
       cancelled = true;
     };
   }, []);
+
+  const paramsSnapshot = searchParams.toString();
+
+  useEffect(() => {
+    const nextSearch = (searchParams.get("search") ?? "").trim();
+    setSearch(nextSearch);
+    setKeyword(nextSearch);
+
+    const nextCategory = searchParams.get("category") ?? "";
+    setCategory(nextCategory);
+
+    const nextSortRaw = searchParams.get("sort") ?? "newest";
+    const nextSort = SORT_OPTIONS.some((option) => option.value === nextSortRaw)
+      ? nextSortRaw
+      : "newest";
+    setSort(nextSort);
+
+    const nextPageRaw = parseInt(searchParams.get("page") ?? "1", 10);
+    const nextPage = Number.isFinite(nextPageRaw) && nextPageRaw > 0 ? nextPageRaw : 1;
+    setPage(nextPage);
+  }, [paramsSnapshot]);
+
+  useEffect(() => {
+    const params = new URLSearchParams();
+
+    if (search) {
+      params.set("search", search);
+    }
+
+    if (category) {
+      params.set("category", category);
+    }
+
+    if (sort !== "newest") {
+      params.set("sort", sort);
+    }
+
+    if (page > 1) {
+      params.set("page", String(page));
+    }
+
+    const desired = params.toString();
+    if (desired !== paramsSnapshot) {
+      setSearchParams(params, { replace: true });
+    }
+  }, [page, search, category, sort, setSearchParams, paramsSnapshot]);
 
   const categoryOptions = useMemo(() => {
     if (!Array.isArray(categories) || categories.length === 0) {
@@ -114,11 +172,11 @@ export default function Products() {
             <input
               value={keyword}
               onChange={(e) => setKeyword(e.target.value)}
-              placeholder="Search products..."
+              placeholder="Tìm kiếm sản phẩm..."
               className="border rounded-lg px-3 py-2"
             />
             <button type="submit" className="px-4 py-2 rounded-lg bg-black text-white">
-              Search
+              Tìm
             </button>
           </form>
 
@@ -131,7 +189,7 @@ export default function Products() {
             disabled={isLoadingCategories}
           >
             {isLoadingCategories ? (
-              <option>Loading...</option>
+              <option>Đang tải...</option>
             ) : (
               categoryOptions.map((c) => (
                 <option key={c.value || "all"} value={c.value}>
@@ -159,12 +217,12 @@ export default function Products() {
 
       {categoriesError && (
         <p className="text-sm text-red-600" role="alert">
-          Failed to load categories: {categoriesError.message || "Unknown error"}
+          Không tải được danh mục: {categoriesError.message || "Lỗi không xác định"}
         </p>
       )}
 
-      {(isLoading || isFetching) && <div className="text-gray-600">Loading...</div>}
-      {isError && <div className="text-red-600">Error: {error.message}</div>}
+      {(isLoading || isFetching) && <div className="text-gray-600">Đang tải...</div>}
+      {isError && <div className="text-red-600">Lỗi: {error.message}</div>}
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {items.map((p) => (
@@ -174,12 +232,12 @@ export default function Products() {
             </div>
             <div className="mt-2">
               <div className="font-medium line-clamp-2">{p.name}</div>
-              <div className="text-gray-700">{Number(p.price).toLocaleString()} VND</div>
+              <div className="text-gray-700">{Number(p.price).toLocaleString("vi-VN")}?</div>
             </div>
           </div>
         ))}
         {items.length === 0 && !isLoading && !isFetching && (
-          <div className="col-span-full text-gray-500">No products found.</div>
+          <div className="col-span-full text-gray-500">Không có sản phẩm.</div>
         )}
       </div>
 
@@ -190,17 +248,17 @@ export default function Products() {
           onClick={() => setPage((p) => Math.max(1, p - 1))}
           className="px-3 py-1 border rounded-lg disabled:opacity-50"
         >
-          Prev
+          Trước
         </button>
         <span>
-          Page {page} / {totalPages}
+          Trang {page} / {totalPages}
         </span>
         <button
           disabled={page >= totalPages}
           onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
           className="px-3 py-1 border rounded-lg disabled:opacity-50"
         >
-          Next
+          Sau
         </button>
       </div>
     </div>
