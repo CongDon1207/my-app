@@ -22,7 +22,7 @@ export async function getProductsApi(params = {}) {
 }
 
 export async function getCategoriesApi() {
-  const res = await http.get('/products/categories');
+  const res = await http.get('/catalog/categories');
   // BE trả { success, data, error }
   if (!res?.data?.success) {
     const msg = res?.data?.error?.message || res?.data?.error || 'Failed to fetch categories';

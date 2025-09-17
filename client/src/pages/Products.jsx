@@ -1,30 +1,76 @@
 // client/src/pages/Products.jsx
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getProductsApi, getCategoriesApi } from "../api/products";
 
 const SORT_OPTIONS = [
-  { value: "newest", label: "Mới nhất" },
-  { value: "price_asc", label: "Giá tăng dần" },
-  { value: "price_desc", label: "Giá giảm dần" },
+  { value: "newest", label: "Newest" },
+  { value: "price_asc", label: "Price Asc" },
+  { value: "price_desc", label: "Price Desc" },
 ];
 
-// Category mẫu để test nhanh / fallback khi API không phản hồi.
-const CATEGORIES_SAMPLE = [
-  { value: "", label: "Tất cả" },
-  { value: "electronics", label: "Electronics" },
-  { value: "accessories", label: "Accessories" },
-];
+const DEFAULT_CATEGORY_OPTION = { value: "", label: "Tat ca" };
 
 export default function Products() {
   const [page, setPage] = useState(1);
   const [limit] = useState(12);
 
-  const [keyword, setKeyword] = useState(""); // input người dùng gõ
-  const [search, setSearch] = useState("");   // giá trị áp dụng tìm kiếm
+  const [keyword, setKeyword] = useState("");
+  const [search, setSearch] = useState("");
 
   const [category, setCategory] = useState("");
   const [sort, setSort] = useState("newest");
+
+  const [categories, setCategories] = useState([]);
+  const [isLoadingCategories, setIsLoadingCategories] = useState(true);
+  const [categoriesError, setCategoriesError] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function fetchCategories() {
+      try {
+        setIsLoadingCategories(true);
+        setCategoriesError(null);
+        const data = await getCategoriesApi();
+        if (!cancelled) {
+          setCategories(Array.isArray(data) ? data : []);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setCategories([]);
+          setCategoriesError(err);
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoadingCategories(false);
+        }
+      }
+    }
+
+    fetchCategories();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const categoryOptions = useMemo(() => {
+    if (!Array.isArray(categories) || categories.length === 0) {
+      return [DEFAULT_CATEGORY_OPTION];
+    }
+
+    return [
+      DEFAULT_CATEGORY_OPTION,
+      ...categories.map((c) => ({
+        value: c.slug ?? "",
+        label:
+          c.productCount != null
+            ? `${c.name} (${c.productCount})`
+            : c.name ?? DEFAULT_CATEGORY_OPTION.label,
+      })),
+    ];
+  }, [categories]);
 
   const queryKey = useMemo(
     () => ["products", { page, limit, search, category, sort }],
@@ -36,26 +82,6 @@ export default function Products() {
     queryFn: () => getProductsApi({ page, limit, search, category, sort }),
     keepPreviousData: true,
   });
-
-  // Categories: fetch once and cache for 5 minutes
-  const {
-    data: categoriesData,
-    isLoading: isLoadingCategories,
-    isError: isErrorCategories,
-    error: categoriesError,
-  } = useQuery({
-    queryKey: ["categories"],
-    queryFn: () => getCategoriesApi(),
-    staleTime: 1000 * 60 * 5,
-  });
-
-  const categoryOptions = useMemo(() => {
-    const src = Array.isArray(categoriesData) ? categoriesData : CATEGORIES_SAMPLE;
-    return src.map((c) => ({
-      value: c.slug ?? c.value ?? "",
-      label: c.productCount != null ? `${c.name} (${c.productCount})` : c.label ?? c.name,
-    }));
-  }, [categoriesData]);
 
   const items = data?.items ?? [];
   const total = data?.total ?? 0;
@@ -88,11 +114,11 @@ export default function Products() {
             <input
               value={keyword}
               onChange={(e) => setKeyword(e.target.value)}
-              placeholder="Tìm kiếm sản phẩm..."
+              placeholder="Search products..."
               className="border rounded-lg px-3 py-2"
             />
             <button type="submit" className="px-4 py-2 rounded-lg bg-black text-white">
-              Tìm
+              Search
             </button>
           </form>
 
@@ -104,14 +130,15 @@ export default function Products() {
             aria-label="Category"
             disabled={isLoadingCategories}
           >
-            {isLoadingCategories && <option>Đang tải...</option>}
-            {isErrorCategories && <option>Không tải được danh mục</option>}
-            {!isLoadingCategories && !isErrorCategories &&
+            {isLoadingCategories ? (
+              <option>Loading...</option>
+            ) : (
               categoryOptions.map((c) => (
-                <option key={c.value} value={c.value}>
+                <option key={c.value || "all"} value={c.value}>
                   {c.label}
                 </option>
-              ))}
+              ))
+            )}
           </select>
 
           {/* Sort */}
@@ -122,14 +149,22 @@ export default function Products() {
             aria-label="Sort"
           >
             {SORT_OPTIONS.map((s) => (
-              <option key={s.value} value={s.value}>{s.label}</option>
+              <option key={s.value} value={s.value}>
+                {s.label}
+              </option>
             ))}
           </select>
         </div>
       </header>
 
-      {(isLoading || isFetching) && <div className="text-gray-600">Đang tải...</div>}
-      {isError && <div className="text-red-600">Lỗi: {error.message}</div>}
+      {categoriesError && (
+        <p className="text-sm text-red-600" role="alert">
+          Failed to load categories: {categoriesError.message || "Unknown error"}
+        </p>
+      )}
+
+      {(isLoading || isFetching) && <div className="text-gray-600">Loading...</div>}
+      {isError && <div className="text-red-600">Error: {error.message}</div>}
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {items.map((p) => (
@@ -139,12 +174,12 @@ export default function Products() {
             </div>
             <div className="mt-2">
               <div className="font-medium line-clamp-2">{p.name}</div>
-              <div className="text-gray-700">{Number(p.price).toLocaleString()}₫</div>
+              <div className="text-gray-700">{Number(p.price).toLocaleString()} VND</div>
             </div>
           </div>
         ))}
         {items.length === 0 && !isLoading && !isFetching && (
-          <div className="col-span-full text-gray-500">Không có sản phẩm.</div>
+          <div className="col-span-full text-gray-500">No products found.</div>
         )}
       </div>
 
@@ -155,15 +190,17 @@ export default function Products() {
           onClick={() => setPage((p) => Math.max(1, p - 1))}
           className="px-3 py-1 border rounded-lg disabled:opacity-50"
         >
-          ← Prev
+          Prev
         </button>
-        <span>Page {page} / {totalPages}</span>
+        <span>
+          Page {page} / {totalPages}
+        </span>
         <button
           disabled={page >= totalPages}
           onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
           className="px-3 py-1 border rounded-lg disabled:opacity-50"
         >
-          Next →
+          Next
         </button>
       </div>
     </div>
