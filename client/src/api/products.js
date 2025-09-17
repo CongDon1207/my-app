@@ -32,3 +32,17 @@ export async function getCategoriesApi() {
   // Trả mảng categories: [{ id, name, slug, parentId, productCount }, ...]
   return res.data.data;
 }
+
+export async function getProductDetailApi(slug) {
+  if (!slug) {
+    throw new Error("Product slug is required");
+  }
+
+  const res = await http.get(`/products/${slug}`);
+  if (!res?.data?.success) {
+    const msg = res?.data?.error?.message || res?.data?.error || 'Failed to fetch product';
+    throw new Error(msg);
+  }
+
+  return res.data.data;
+}

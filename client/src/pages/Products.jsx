@@ -1,35 +1,34 @@
 // client/src/pages/Products.jsx
 import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { getProductsApi, getCategoriesApi } from "../api/products";
 
 const SORT_OPTIONS = [
-  { value: "newest", label: "Mới nhất" },
-  { value: "price_asc", label: "Giá tăng dần" },
-  { value: "price_desc", label: "Giá giảm dần" },
+  { value: "newest", label: "Moi nhat" },
+  { value: "price_asc", label: "Gia tang dan" },
+  { value: "price_desc", label: "Gia giam dan" },
 ];
 
-const DEFAULT_CATEGORY_OPTION = { value: "", label: "Tất cả" };
+const DEFAULT_CATEGORY_OPTION = { value: "", label: "Tat ca" };
+
+function normalizeSort(value) {
+  return SORT_OPTIONS.some((option) => option.value === value) ? value : "newest";
+}
 
 export default function Products() {
   const [searchParams, setSearchParams] = useSearchParams();
 
   const initialSearch = (searchParams.get("search") ?? "").trim();
   const initialCategory = searchParams.get("category") ?? "";
-  const initialSortRaw = searchParams.get("sort") ?? "newest";
-  const initialSort = SORT_OPTIONS.some((option) => option.value === initialSortRaw)
-    ? initialSortRaw
-    : "newest";
+  const initialSort = normalizeSort(searchParams.get("sort") ?? "newest");
   const initialPageRaw = parseInt(searchParams.get("page") ?? "1", 10);
   const initialPage = Number.isFinite(initialPageRaw) && initialPageRaw > 0 ? initialPageRaw : 1;
 
   const [page, setPage] = useState(initialPage);
   const [limit] = useState(12);
-
   const [keyword, setKeyword] = useState(initialSearch);
   const [search, setSearch] = useState(initialSearch);
-
   const [category, setCategory] = useState(initialCategory);
   const [sort, setSort] = useState(initialSort);
 
@@ -71,47 +70,41 @@ export default function Products() {
 
   useEffect(() => {
     const nextSearch = (searchParams.get("search") ?? "").trim();
-    setSearch(nextSearch);
-    setKeyword(nextSearch);
+    if (nextSearch !== search) {
+      setSearch(nextSearch);
+      setKeyword(nextSearch);
+    }
 
     const nextCategory = searchParams.get("category") ?? "";
-    setCategory(nextCategory);
+    if (nextCategory !== category) {
+      setCategory(nextCategory);
+    }
 
-    const nextSortRaw = searchParams.get("sort") ?? "newest";
-    const nextSort = SORT_OPTIONS.some((option) => option.value === nextSortRaw)
-      ? nextSortRaw
-      : "newest";
-    setSort(nextSort);
+    const nextSort = normalizeSort(searchParams.get("sort") ?? "newest");
+    if (nextSort !== sort) {
+      setSort(nextSort);
+    }
 
-    const nextPageRaw = parseInt(searchParams.get("page") ?? "1", 10);
-    const nextPage = Number.isFinite(nextPageRaw) && nextPageRaw > 0 ? nextPageRaw : 1;
-    setPage(nextPage);
+    const nextPageParsed = parseInt(searchParams.get("page") ?? "1", 10);
+    const nextPage = Number.isFinite(nextPageParsed) && nextPageParsed > 0 ? nextPageParsed : 1;
+    if (nextPage !== page) {
+      setPage(nextPage);
+    }
   }, [paramsSnapshot]);
 
   useEffect(() => {
     const params = new URLSearchParams();
 
-    if (search) {
-      params.set("search", search);
-    }
-
-    if (category) {
-      params.set("category", category);
-    }
-
-    if (sort !== "newest") {
-      params.set("sort", sort);
-    }
-
-    if (page > 1) {
-      params.set("page", String(page));
-    }
+    if (search) params.set("search", search);
+    if (category) params.set("category", category);
+    if (sort !== "newest") params.set("sort", sort);
+    if (page > 1) params.set("page", String(page));
 
     const desired = params.toString();
     if (desired !== paramsSnapshot) {
       setSearchParams(params, { replace: true });
     }
-  }, [page, search, category, sort, setSearchParams, paramsSnapshot]);
+  }, [page, search, category, sort, paramsSnapshot, setSearchParams]);
 
   const categoryOptions = useMemo(() => {
     if (!Array.isArray(categories) || categories.length === 0) {
@@ -145,19 +138,19 @@ export default function Products() {
   const total = data?.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / limit));
 
-  const onSubmitSearch = (e) => {
-    e.preventDefault();
+  const onSubmitSearch = (event) => {
+    event.preventDefault();
     setPage(1);
     setSearch(keyword.trim());
   };
 
-  const onChangeCategory = (e) => {
-    setCategory(e.target.value);
+  const onChangeCategory = (event) => {
+    setCategory(event.target.value);
     setPage(1);
   };
 
-  const onChangeSort = (e) => {
-    setSort(e.target.value);
+  const onChangeSort = (event) => {
+    setSort(event.target.value);
     setPage(1);
   };
 
@@ -167,20 +160,18 @@ export default function Products() {
         <h1 className="text-2xl font-semibold">Products</h1>
 
         <div className="flex flex-wrap gap-2">
-          {/* Search */}
           <form onSubmit={onSubmitSearch} className="flex gap-2">
             <input
               value={keyword}
-              onChange={(e) => setKeyword(e.target.value)}
-              placeholder="Tìm kiếm sản phẩm..."
+              onChange={(event) => setKeyword(event.target.value)}
+              placeholder="Tim kiem san pham..."
               className="border rounded-lg px-3 py-2"
             />
             <button type="submit" className="px-4 py-2 rounded-lg bg-black text-white">
-              Tìm
+              Tim
             </button>
           </form>
 
-          {/* Category */}
           <select
             value={category}
             onChange={onChangeCategory}
@@ -189,26 +180,25 @@ export default function Products() {
             disabled={isLoadingCategories}
           >
             {isLoadingCategories ? (
-              <option>Đang tải...</option>
+              <option>Dang tai...</option>
             ) : (
-              categoryOptions.map((c) => (
-                <option key={c.value || "all"} value={c.value}>
-                  {c.label}
+              categoryOptions.map((option) => (
+                <option key={option.value || "all"} value={option.value}>
+                  {option.label}
                 </option>
               ))
             )}
           </select>
 
-          {/* Sort */}
           <select
             value={sort}
             onChange={onChangeSort}
             className="border rounded-lg px-3 py-2"
             aria-label="Sort"
           >
-            {SORT_OPTIONS.map((s) => (
-              <option key={s.value} value={s.value}>
-                {s.label}
+            {SORT_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
               </option>
             ))}
           </select>
@@ -217,45 +207,51 @@ export default function Products() {
 
       {categoriesError && (
         <p className="text-sm text-red-600" role="alert">
-          Không tải được danh mục: {categoriesError.message || "Lỗi không xác định"}
+          Khong tai duoc danh muc: {categoriesError.message || "Loi khong xac dinh"}
         </p>
       )}
 
-      {(isLoading || isFetching) && <div className="text-gray-600">Đang tải...</div>}
-      {isError && <div className="text-red-600">Lỗi: {error.message}</div>}
+      {(isLoading || isFetching) && <div className="text-gray-600">Dang tai...</div>}
+      {isError && <div className="text-red-600">Loi: {error.message}</div>}
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {items.map((p) => (
-          <div key={p.id} className="border rounded-xl p-3">
+        {items.map((item) => (
+          <Link
+            key={item.id}
+            to={`/products/${item.slug}`}
+            className="border rounded-xl p-3 hover:shadow focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black"
+          >
             <div className="aspect-video bg-gray-50 flex items-center justify-center overflow-hidden rounded-lg">
-              <img src={p.image} alt={p.name} className="max-h-24" />
+              <img src={item.image} alt={item.name} className="max-h-24" />
             </div>
-            <div className="mt-2">
-              <div className="font-medium line-clamp-2">{p.name}</div>
-              <div className="text-gray-700">{Number(p.price).toLocaleString("vi-VN")}?</div>
+            <div className="mt-2 space-y-1">
+              <div className="font-medium line-clamp-2 text-gray-900">{item.name}</div>
+              <div className="text-gray-700">
+                {Number(item.price).toLocaleString("vi-VN")}
+                <span className="ml-1 uppercase">{item.currency || "vnd"}</span>
+              </div>
             </div>
-          </div>
+          </Link>
         ))}
         {items.length === 0 && !isLoading && !isFetching && (
-          <div className="col-span-full text-gray-500">Không có sản phẩm.</div>
+          <div className="col-span-full text-gray-500">Khong co san pham.</div>
         )}
       </div>
 
-      {/* Pagination */}
       <div className="flex items-center justify-center gap-2">
         <button
           disabled={page <= 1}
-          onClick={() => setPage((p) => Math.max(1, p - 1))}
+          onClick={() => setPage((prev) => Math.max(1, prev - 1))}
           className="px-3 py-1 border rounded-lg disabled:opacity-50"
         >
-          Trước
+          Truoc
         </button>
         <span>
           Trang {page} / {totalPages}
         </span>
         <button
           disabled={page >= totalPages}
-          onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+          onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
           className="px-3 py-1 border rounded-lg disabled:opacity-50"
         >
           Sau

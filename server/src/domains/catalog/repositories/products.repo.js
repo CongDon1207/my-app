@@ -28,7 +28,6 @@ export async function findProducts({ page = 1, limit = 12, search = '', category
   const take = Number(limit);
   const orderBy = buildOrderBy(sort);
 
-  // Build where clause for Prisma
   const where = { active: true };
 
   if (search) {
@@ -39,15 +38,14 @@ export async function findProducts({ page = 1, limit = 12, search = '', category
   }
 
   if (categorySlug) {
-    // filter by related category slug
     where.categories = { slug: String(categorySlug) };
   }
 
-  // Fetch items with first image
   const items = await prisma.products.findMany({
     where,
     select: {
       id: true,
+      slug: true,
       title: true,
       price: true,
       currency: true,
@@ -62,12 +60,11 @@ export async function findProducts({ page = 1, limit = 12, search = '', category
     take
   });
 
-  // Count total matching
   const total = await prisma.products.count({ where });
 
-  // Map imageUrl
-  const mapped = items.map(p => ({
+  const mapped = items.map((p) => ({
     id: p.id,
+    slug: p.slug,
     title: p.title,
     price: p.price,
     currency: p.currency,
@@ -79,6 +76,50 @@ export async function findProducts({ page = 1, limit = 12, search = '', category
     total: Number(total),
     page: Number(page),
     limit: Number(limit)
+  };
+}
+
+export async function findProductBySlug(slug) {
+  if (!slug) return null;
+
+  const product = await prisma.products.findUnique({
+    where: { slug: String(slug) },
+    select: {
+      id: true,
+      slug: true,
+      title: true,
+      description: true,
+      price: true,
+      currency: true,
+      stock: true,
+      created_at: true,
+      categories: {
+        select: { id: true, name: true, slug: true }
+      },
+      product_images: {
+        select: { id: true, url: true },
+        orderBy: { id: 'asc' }
+      }
+    }
+  });
+
+  if (!product) return null;
+
+  return {
+    id: product.id,
+    slug: product.slug,
+    title: product.title,
+    description: product.description,
+    price: product.price,
+    currency: product.currency,
+    stock: product.stock,
+    createdAt: product.created_at,
+    category: product.categories
+      ? { id: product.categories.id, name: product.categories.name, slug: product.categories.slug }
+      : null,
+    images: Array.isArray(product.product_images)
+      ? product.product_images.map((img) => ({ id: img.id, url: img.url }))
+      : []
   };
 }
 
